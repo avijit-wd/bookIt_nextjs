@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import validator from "validator";
+import { isEmail } from "validator";
 import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema(
@@ -9,11 +9,11 @@ const userSchema = new mongoose.Schema(
       required: [true, "Please enter your name"],
       maxLength: [50, "Your name cannot exceed 50 characters."],
     },
-    name: {
+    email: {
       type: String,
       required: [true, "Please enter your email"],
       unique: true,
-      validate: [validator.isEmail, "Please enter valid email address"],
+      validate: [isEmail, "Please enter valid email address"],
     },
     password: {
       type: String,
@@ -44,5 +44,17 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+//Encrypting user befor saving user information
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    next();
+  }
+  this.password = await bcrypt.hash(this.password, 10);
+});
+
+userSchema.methods.comparePassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
 
 export default mongoose.models.User || mongoose.model("User", userSchema);
